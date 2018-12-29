@@ -144,6 +144,7 @@
       "packages/core/errors/**/*",
       "packages/common/exceptions/*.ts",
       "packages/common/http/*.ts",
+      "packages/common/hooks/*.ts",
       "packages/common/utils/load-package.util.ts",
       "packages/microservices/exceptions/",
       "packages/microservices/microservices-module.ts",

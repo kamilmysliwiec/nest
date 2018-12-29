@@ -10,6 +10,7 @@ export * from './cache';
 export * from './decorators';
 export * from './enums';
 export * from './exceptions';
+export * from './hooks';
 export * from './http';
 export {
   ArgumentMetadata,
