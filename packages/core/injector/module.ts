@@ -29,10 +29,41 @@ import { createContextId } from '../helpers';
 import { NestContainer } from './container';
 import { InstanceWrapper } from './instance-wrapper';
 import { ModuleRef } from './module-ref';
+import { MixedMultiProviderException } from '../errors/exceptions/mixed-multi-provider.exception';
 
 interface ProviderName {
   name?: string | symbol;
 }
+
+type CustomProvider = (
+  | ClassProvider
+  | FactoryProvider
+  | ValueProvider
+  | ExistingProvider) &
+  ProviderName;
+
+type MultiProvider = CustomProvider & {
+  multi: true;
+};
+
+/**
+ * The factory which will be used for multi providers
+ */
+const MULTI_PROVIDER_FACTORY = externalMultiProviderLength =>
+  ((...args: any[]) =>
+    args.reduce(
+      (current: any[], next: any[] | any, index: number) =>
+        // The external multi providers are already in an array => destruct them.
+        index < externalMultiProviderLength
+          ? [...current, ...next]
+          : [...current, next],
+      [],
+    )) as any;
+
+const MULTI_ELEMENT_PREFIX = 'MULTI_ELEMENT';
+const MULTI_EXTERNAL_PREFIX = 'MULTI_EXTERNAL';
+const getMultiExternalToken = (module: Module, token: string | symbol | any) =>
+  `${MULTI_EXTERNAL_PREFIX}_${module.id}_${token.toString()}`;
 
 export class Module {
   private readonly _id: string;
@@ -230,19 +261,24 @@ export class Module {
   }
 
   public addCustomProvider(
-    provider: (
-      | ClassProvider
-      | FactoryProvider
-      | ValueProvider
-      | ExistingProvider) &
-      ProviderName,
+    provider: CustomProvider,
     collection: Map<string, any>,
   ): string {
     const name = this.getProviderStaticToken(provider.provide) as string;
+
     provider = {
       ...provider,
       name,
     };
+
+    this.checkForMixedMulti(provider, collection);
+
+    if (this.isMultiProvider(provider)) {
+      // The provider which was added by the user needs to be renamed, because the
+      // the multi provider would override that token
+      provider.name = this.addMultiProvider(provider, collection);
+    }
+
     if (this.isCustomClass(provider)) {
       this.addCustomClass(provider, collection);
     } else if (this.isCustomValue(provider)) {
@@ -271,6 +307,10 @@ export class Module {
     return !isUndefined((provider as ExistingProvider).useExisting);
   }
 
+  public isMultiProvider(provider: any): provider is MultiProvider {
+    return provider.multi === true;
+  }
+
   public isDynamicModule(exported: any): exported is DynamicModule {
     return exported && exported.module;
   }
@@ -279,7 +319,7 @@ export class Module {
     provider: ClassProvider & ProviderName,
     collection: Map<string, InstanceWrapper>,
   ) {
-    const { name, useClass, scope } = provider;
+    const { name, useClass, scope, multi } = provider;
     collection.set(
       name as string,
       new InstanceWrapper({
@@ -288,6 +328,7 @@ export class Module {
         instance: null,
         isResolved: false,
         scope,
+        multi,
         host: this,
       }),
     );
@@ -297,7 +338,7 @@ export class Module {
     provider: ValueProvider & ProviderName,
     collection: Map<string, InstanceWrapper>,
   ) {
-    const { name, useValue: value } = provider;
+    const { name, useValue: value, multi } = provider;
     collection.set(
       name as string,
       new InstanceWrapper({
@@ -307,6 +348,7 @@ export class Module {
         isResolved: true,
         async: value instanceof Promise,
         host: this,
+        multi,
       }),
     );
   }
@@ -315,7 +357,7 @@ export class Module {
     provider: FactoryProvider & ProviderName,
     collection: Map<string, InstanceWrapper>,
   ) {
-    const { name, useFactory: factory, inject, scope } = provider;
+    const { name, useFactory: factory, inject, scope, multi } = provider;
     collection.set(
       name as string,
       new InstanceWrapper({
@@ -325,6 +367,7 @@ export class Module {
         isResolved: false,
         inject: inject || [],
         scope,
+        multi,
         host: this,
       }),
     );
@@ -348,11 +391,131 @@ export class Module {
     );
   }
 
+  /**
+   * Checks if the already stored provider has the same `multi` value
+   * as the new provider.
+   *
+   * @param provider The provider which should get newly added
+   * @param collection The collection with providers
+   *
+   * @throws {MixedMultiProviderException}
+   * If the `multi` option of the stored provider differs from the given provider
+   */
+  private checkForMixedMulti(
+    provider: CustomProvider,
+    collection: Map<string, InstanceWrapper>,
+  ) {
+    // Get provider which is already stored in the collection.
+    const storedProvider = collection.get(provider.provide as any);
+    if (storedProvider) {
+      // Multiple provider use the same key.
+      const isMultiDefined = !(
+        isUndefined((provider as any).multi) &&
+        isUndefined(storedProvider.multi)
+      );
+      // Check if the new provider has the same multi value
+      if (
+        isMultiDefined &&
+        (provider as any).multi !== !!storedProvider.multi
+      ) {
+        // It has mixed multi option
+        throw new MixedMultiProviderException(provider.name);
+      }
+    }
+  }
+
+  /**
+   * Adds two new providers which will act as a multi providers.
+   *
+   * - Module-Internal Multi Provider:
+   * provides: `${provider.provide}`
+   * factory: returns all the values of the same token inside the module as an array.
+   * In addition it also returns all the values of the module-external multi providers
+   * of the same token and concats it to the array.
+   *
+   * - Module-External Multi Provider
+   * provides: `MULTI_EXTERNAL_${module.id}_${provider.provide}`
+   * factory: returns the value of the module-internal multi provider
+   *
+   * @returns {any}
+   * The new token which should be used for the given provider,
+   * because the new created multi provider will be using the
+   * token of the given provider.
+   *
+   * @param provider The provider which is a multi provider
+   * @param collection The collection to add the multi provider to
+   */
+  public addMultiProvider(
+    provider: MultiProvider,
+    collection: Map<string, InstanceWrapper>,
+  ): string {
+    const { multi } = provider;
+    const multiProviderToken = provider.provide;
+
+    // Get provider which is already stored in the collection.
+    const storedProvider = collection.get(provider.provide as any);
+
+    // The stored provided which are being exported by another module
+    // with the same token
+    const storedExportedProviders = [...this.relatedModules]
+      .filter(module =>
+        module.exports.has(getMultiExternalToken(module, multiProviderToken)),
+      )
+      .map(module => getMultiExternalToken(module, multiProviderToken));
+
+    const elementToken: string = `${MULTI_ELEMENT_PREFIX}_${randomStringGenerator()}`;
+    let inject: any[] = null;
+
+    // If the provider indicates that it's a multi-provider, process it specially.
+    // First check whether it's been defined already.
+    if (storedProvider) {
+      // A provider already exists. Append new value
+      inject = [...(storedProvider.inject || []), elementToken];
+    } else {
+      // First multi provider with this token
+      inject = [elementToken];
+    }
+
+    if (storedExportedProviders.length) {
+      const providersToAdd = storedExportedProviders.filter(
+        exportedProvider => !inject.includes(exportedProvider),
+      );
+      inject = [...providersToAdd, ...inject];
+    }
+
+    collection.set(
+      multiProviderToken as any,
+      // The new multi provider
+      new InstanceWrapper({
+        name: multiProviderToken,
+        // Returns all the inject arguments as array
+        metatype: MULTI_PROVIDER_FACTORY(storedExportedProviders.length),
+        inject,
+        multi,
+        host: this,
+      }),
+    );
+
+    collection.set(
+      getMultiExternalToken(this, multiProviderToken),
+      new InstanceWrapper({
+        name: getMultiExternalToken(this, multiProviderToken),
+        metatype: args => args,
+        inject: [multiProviderToken],
+        multi,
+        host: this,
+      }),
+    );
+    return elementToken;
+  }
+
   public addExportedProvider(
     provider: Provider & ProviderName | string | symbol | DynamicModule,
   ) {
     const addExportedUnit = (token: string | symbol) =>
-      this._exports.add(this.validateExportedProvider(token));
+      this.validateExportedProvider(token).forEach(exportingToken =>
+        this._exports.add(exportingToken),
+      );
 
     if (this.isCustomProvider(provider as any)) {
       return this.addCustomExportedProvider(provider as any);
@@ -374,15 +537,24 @@ export class Module {
   ) {
     const provide = provider.provide;
     if (isString(provide) || isSymbol(provide)) {
-      return this._exports.add(this.validateExportedProvider(provide));
+      return this.validateExportedProvider(provide).forEach(token =>
+        this._exports.add(token),
+      );
     }
-    this._exports.add(this.validateExportedProvider(provide.name));
+    this.validateExportedProvider(provide.name).forEach(token =>
+      this._exports.add(token),
+    );
   }
 
   public validateExportedProvider(token: string | symbol) {
-    if (this._providers.has(token)) {
-      return token;
+    const provider = this._providers.get(token);
+    if (provider) {
+      if (provider.multi) {
+        return [token, getMultiExternalToken(provider.host, token)];
+      }
+      return [token];
     }
+
     const importsArray = [...this._imports.values()];
     const importsNames = importsArray
       .filter(item => item)
@@ -394,7 +566,7 @@ export class Module {
       const { name } = this.metatype;
       throw new UnknownExportException(name);
     }
-    return token;
+    return [token];
   }
 
   public addController(controller: Type<Controller>) {

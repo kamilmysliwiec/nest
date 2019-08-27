@@ -77,6 +77,16 @@ describe('Module', () => {
       module.addInjectable({ provide: 'test' } as any);
       expect(addCustomProviderSpy.called).to.be.true;
     });
+    describe('when provider has `multi` option', () => {
+      it('should call `addMultiProvider`', () => {
+        const provider = { provide: 'test', multi: true } as any;
+        const addMultiProviderSpy = sinon.spy(module, 'addMultiProvider');
+        module.addInjectable(provider);
+        expect(
+          addMultiProviderSpy.withArgs(provider, module.providers).calledOnce,
+        );
+      });
+    });
   });
 
   it('should add provider', () => {
@@ -172,6 +182,7 @@ describe('Module', () => {
             metatype: type as any,
             instance: null,
             isResolved: false,
+            multi: undefined,
           }),
         ),
       ).to.be.true;
@@ -203,6 +214,7 @@ describe('Module', () => {
             instance: value,
             isResolved: true,
             async: false,
+            multi: undefined,
           }),
         ),
       ).to.be.true;
@@ -233,6 +245,7 @@ describe('Module', () => {
             instance: null,
             isResolved: false,
             inject: inject as any,
+            multi: undefined,
           }),
         ),
       ).to.be.true;
@@ -287,7 +300,7 @@ describe('Module', () => {
 
   describe('when exported provider is custom provided', () => {
     beforeEach(() => {
-      sinon.stub(module, 'validateExportedProvider').callsFake(o => o);
+      sinon.stub(module, 'validateExportedProvider').callsFake(o => [o]);
     });
     it('should call `addCustomExportedProvider`', () => {
       const addCustomExportedProviderSpy = sinon.spy(
@@ -410,7 +423,7 @@ describe('Module', () => {
     describe('when unit exists in provider collection', () => {
       it('should behave as identity', () => {
         (module as any)._providers = new Map([[token, true]]);
-        expect(module.validateExportedProvider(token)).to.be.eql(token);
+        expect(module.validateExportedProvider(token)).to.be.eql([token]);
       });
     });
     describe('when unit exists in related modules collection', () => {
@@ -419,7 +432,17 @@ describe('Module', () => {
         (module as any)._imports = new Set([
           new Module(metatype as any, [], new NestContainer()),
         ]);
-        expect(module.validateExportedProvider(token)).to.be.eql(token);
+        expect(module.validateExportedProvider(token)).to.be.eql([token]);
+      });
+    });
+    describe('when provider is a multi provider', () => {
+      it('should return the provider token and external multi token', () => {
+        const host = { id: '1' };
+        (module as any)._providers = new Map([[token, { multi: true, host }]]);
+        expect(module.validateExportedProvider(token)).to.be.eql([
+          token,
+          'MULTI_EXTERNAL_1_token',
+        ]);
       });
     });
     describe('when unit does not exist in both provider and related modules collections', () => {

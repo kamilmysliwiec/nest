@@ -61,6 +61,10 @@ export const UNKNOWN_DEPENDENCIES_MESSAGE = (
   return message;
 };
 
+export const MIXED_MULTI_PROVIDER_MESSAGE = (
+  name: string
+) => `Mixed multi-provider for ${name}.`;
+
 export const INVALID_MIDDLEWARE_MESSAGE = (
   text: TemplateStringsArray,
   name: string,

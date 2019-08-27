@@ -45,6 +45,11 @@ export interface ClassProvider<T = any> {
    * Optional enum defining lifetime of the provider that is injected.
    */
   scope?: Scope;
+  /**
+   * If true, then injector returns an array of instances. This is useful to allow multiple
+   * providers spread across many files to provide configuration information to a common token.
+   */
+  multi?: boolean | undefined;
 }
 
 /**
@@ -71,6 +76,11 @@ export interface ValueProvider<T = any> {
    * Instance of a provider to be injected.
    */
   useValue: T;
+  /**
+   * If true, then injector returns an array of instances. This is useful to allow multiple
+   * providers spread across many files to provide configuration information to a common token.
+   */
+  multi?: boolean | undefined;
 }
 
 /**
@@ -110,6 +120,11 @@ export interface FactoryProvider<T = any> {
    * Optional enum defining lifetime of the provider that is returned by the Factory function.
    */
   scope?: Scope;
+  /**
+   * If true, then injector returns an array of instances. This is useful to allow multiple
+   * providers spread across many files to provide configuration information to a common token.
+   */
+  multi?: boolean | undefined;
 }
 
 /**
