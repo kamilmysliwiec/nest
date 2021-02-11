@@ -63,7 +63,10 @@ export class TestingModuleBuilder {
     await this.scanner.scan(this.module);
 
     this.applyOverloadsMap();
-    await this.instanceLoader.createInstancesOfDependencies(this.mocker);
+    await this.instanceLoader.createInstancesOfDependencies(
+      this.container,
+      this.mocker,
+    );
     this.scanner.applyApplicationProviders();
 
     const root = this.getRootModule();
