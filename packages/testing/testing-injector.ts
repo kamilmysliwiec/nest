@@ -54,10 +54,9 @@ export class TestingInjector extends Injector {
         const modRef = new (moduleRef.createModuleReferenceType())();
         (this.container.getInternalCoreModuleRef() as any)._providers.set(
           name,
-          mockedInstance,
+          newWrapper,
         );
         (this.container.getInternalCoreModuleRef() as any)._exports.add(name);
-        console.log((modRef as any).container.getInternalCoreModuleRef());
         return newWrapper;
       } else {
         throw err;
