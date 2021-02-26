@@ -1,5 +1,6 @@
 import { NestContainer } from '@nestjs/core';
 import { InstanceLoader } from '@nestjs/core/injector/instance-loader';
+import { MockFactory } from './interfaces';
 import { TestingInjector } from './testing-injector';
 
 export class TestingInstanceLoader extends InstanceLoader {
@@ -7,7 +8,7 @@ export class TestingInstanceLoader extends InstanceLoader {
 
   async createInstancesOfDependencies(
     container?: NestContainer,
-    mocker?: () => any,
+    mocker?: MockFactory,
   ): Promise<void> {
     this.injector.setContainer(container);
     mocker && this.injector.setMocker(mocker);

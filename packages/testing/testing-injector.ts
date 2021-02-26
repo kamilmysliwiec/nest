@@ -6,12 +6,13 @@ import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 import { Module } from '@nestjs/core/injector/module';
 import { STATIC_CONTEXT } from '@nestjs/core/injector/constants';
 import { NestContainer } from '@nestjs/core';
+import { MockFactory } from './interfaces';
 
 export class TestingInjector extends Injector {
-  protected mocker?: <T extends any = {}>() => T;
+  protected mocker?: MockFactory;
 
   protected container: NestContainer;
-  setMocker(mocker: () => any): void {
+  setMocker(mocker: MockFactory): void {
     this.mocker = mocker;
   }
 
@@ -41,7 +42,10 @@ export class TestingInjector extends Injector {
       return retWrapper;
     } catch (err) {
       if (this.mocker) {
-        const mockedInstance = this.mocker<T>();
+        const mockedInstance = this.mocker(name);
+        if (!mockedInstance) {
+          throw err;
+        }
         const newWrapper = new InstanceWrapper({
           name,
           isAlias: false,
@@ -51,12 +55,9 @@ export class TestingInjector extends Injector {
           host: moduleRef,
           metatype: wrapper.metatype,
         });
-        const modRef = new (moduleRef.createModuleReferenceType())();
-        (this.container.getInternalCoreModuleRef() as any)._providers.set(
-          name,
-          newWrapper,
-        );
-        (this.container.getInternalCoreModuleRef() as any)._exports.add(name);
+        const internalCoreModule = this.container.getInternalCoreModuleRef() as any;
+        internalCoreModule._providers.set(name, newWrapper);
+        internalCoreModule._exports.add(name);
         return newWrapper;
       } else {
         throw err;

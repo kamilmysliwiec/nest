@@ -4,7 +4,11 @@ import { ApplicationConfig } from '@nestjs/core/application-config';
 import { NestContainer } from '@nestjs/core/injector/container';
 import { MetadataScanner } from '@nestjs/core/metadata-scanner';
 import { DependenciesScanner } from '@nestjs/core/scanner';
-import { OverrideBy, OverrideByFactoryOptions } from './interfaces';
+import {
+  MockFactory,
+  OverrideBy,
+  OverrideByFactoryOptions,
+} from './interfaces';
 import { TestingLogger } from './services/testing-logger.service';
 import { TestingInstanceLoader } from './testing-instance-loader';
 import { TestingModule } from './testing-module';
@@ -17,7 +21,7 @@ export class TestingModuleBuilder {
   private readonly instanceLoader = new TestingInstanceLoader(this.container);
   private readonly module: any;
   private testingLogger: LoggerService;
-  private mocker?: () => any;
+  private mocker?: MockFactory;
 
   constructor(metadataScanner: MetadataScanner, metadata: ModuleMetadata) {
     this.scanner = new DependenciesScanner(
@@ -37,7 +41,7 @@ export class TestingModuleBuilder {
     return this.override(typeOrToken, false);
   }
 
-  public useMocker(mocker: () => any): TestingModuleBuilder {
+  public useMocker(mocker: MockFactory): TestingModuleBuilder {
     this.mocker = mocker;
     return this;
   }
