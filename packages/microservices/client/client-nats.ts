@@ -68,7 +68,8 @@ export class ClientNats extends ClientProxy {
       if (message.id && message.id !== packet.id) {
         return undefined;
       }
-      const { err, response, isDisposed } = message;
+      const { response, isDisposed } = message;
+      const err = response instanceof Error ? response : message.err;
       if (isDisposed || err) {
         return callback({
           err,

@@ -107,6 +107,14 @@ describe('ClientNats', () => {
       response: 'test',
       id: '1',
     };
+    const errorResponseMessage = {
+      response: new Error('Nats error'),
+      id: '1',
+    };
+    const consumerErrorMessage = {
+      err: new Error('Consumer error'),
+      id: '1',
+    };
 
     describe('not completed', () => {
       beforeEach(async () => {
@@ -160,6 +168,54 @@ describe('ClientNats', () => {
 
       it('should not call callback', () => {
         expect(callback.called).to.be.false;
+      });
+    });
+    describe('error response propogation', () => {
+      beforeEach(async () => {
+        callback = sinon.spy();
+        subscription = client.createSubscriptionHandler(
+          msg,
+          callback,
+        );
+        subscription(errorResponseMessage);
+      });
+      it('should call callback with expected arguments', async () => {
+        expect(callback.called).to.be.true;
+        expect(
+          callback.calledWith({
+            isDisposed: true,
+            response: errorResponseMessage.response,
+            err: errorResponseMessage.response,
+          }),
+        ).to.be.true;
+      });
+      it('"err" param is defined and instance of Error', async () => {
+        expect(callback.called).to.be.true;
+        expect(callback.getCall(0).args[0].err).to.be.instanceof(Error);
+      });
+      it('propagates consumer error', async () => {
+        callback = sinon.spy();
+        subscription = client.createSubscriptionHandler(
+          msg,
+          callback,
+        );
+        subscription(consumerErrorMessage);
+        expect(callback.called).to.be.true;
+        expect(callback.getCall(0).args[0].err).to.be.equal(consumerErrorMessage.err);
+      });
+      it('takes NAT error over consumer one', async () => {
+        callback = sinon.spy();
+        subscription = client.createSubscriptionHandler(
+          msg,
+          callback,
+        );
+        const natResponseError = new Error('NAT error');
+        subscription({
+          ...consumerErrorMessage,
+          response: natResponseError,
+        });
+        expect(callback.called).to.be.true;
+        expect(callback.getCall(0).args[0].err).to.be.equal(natResponseError);
       });
     });
   });
