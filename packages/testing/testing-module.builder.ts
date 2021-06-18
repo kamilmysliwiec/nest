@@ -2,11 +2,15 @@ import { Logger, LoggerService, Module } from '@nestjs/common';
 import { ModuleMetadata } from '@nestjs/common/interfaces';
 import { ApplicationConfig } from '@nestjs/core/application-config';
 import { NestContainer } from '@nestjs/core/injector/container';
-import { InstanceLoader } from '@nestjs/core/injector/instance-loader';
 import { MetadataScanner } from '@nestjs/core/metadata-scanner';
 import { DependenciesScanner } from '@nestjs/core/scanner';
-import { OverrideBy, OverrideByFactoryOptions } from './interfaces';
+import {
+  MockFactory,
+  OverrideBy,
+  OverrideByFactoryOptions,
+} from './interfaces';
 import { TestingLogger } from './services/testing-logger.service';
+import { TestingInstanceLoader } from './testing-instance-loader';
 import { TestingModule } from './testing-module';
 
 export class TestingModuleBuilder {
@@ -14,9 +18,10 @@ export class TestingModuleBuilder {
   private readonly container = new NestContainer(this.applicationConfig);
   private readonly overloadsMap = new Map();
   private readonly scanner: DependenciesScanner;
-  private readonly instanceLoader = new InstanceLoader(this.container);
+  private readonly instanceLoader = new TestingInstanceLoader(this.container);
   private readonly module: any;
   private testingLogger: LoggerService;
+  private mocker?: MockFactory;
 
   constructor(metadataScanner: MetadataScanner, metadata: ModuleMetadata) {
     this.scanner = new DependenciesScanner(
@@ -34,6 +39,11 @@ export class TestingModuleBuilder {
 
   public overridePipe<T = any>(typeOrToken: T): OverrideBy {
     return this.override(typeOrToken, false);
+  }
+
+  public useMocker(mocker: MockFactory): TestingModuleBuilder {
+    this.mocker = mocker;
+    return this;
   }
 
   public overrideFilter<T = any>(typeOrToken: T): OverrideBy {
@@ -57,7 +67,10 @@ export class TestingModuleBuilder {
     await this.scanner.scan(this.module);
 
     this.applyOverloadsMap();
-    await this.instanceLoader.createInstancesOfDependencies();
+    await this.instanceLoader.createInstancesOfDependencies(
+      this.container,
+      this.mocker,
+    );
     this.scanner.applyApplicationProviders();
 
     const root = this.getRootModule();

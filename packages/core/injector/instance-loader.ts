@@ -8,7 +8,7 @@ import { InternalCoreModule } from './internal-core-module';
 import { Module } from './module';
 
 export class InstanceLoader {
-  private readonly injector = new Injector();
+  protected readonly injector = new Injector();
   private readonly logger = new Logger(InstanceLoader.name, true);
 
   constructor(private readonly container: NestContainer) {}
