@@ -15,6 +15,7 @@ import { Server } from '../server/server';
 import { CustomTransportStrategy } from './custom-transport-strategy.interface';
 import { Deserializer } from './deserializer.interface';
 import { Serializer } from './serializer.interface';
+import * as tls from 'tls';
 
 export type MicroserviceOptions =
   | GrpcOptions
@@ -103,39 +104,37 @@ export interface MqttOptions {
 export interface NatsOptions {
   transport?: Transport.NATS;
   options?: {
-    encoding?: string;
-    url?: string;
-    name?: string;
-    user?: string;
-    pass?: string;
+    encoding?: BufferEncoding;
+    json?: boolean;
     maxPingOut?: number;
     maxReconnectAttempts?: number;
-    reconnectTimeWait?: number;
-    reconnectJitter?: number;
-    reconnectJitterTLS?: number;
-    reconnectDelayHandler?: any;
-    servers?: string[];
-    nkey?: any;
-    reconnect?: boolean;
+    name?: string;
+    nkey?: string;
+    noEcho?: boolean
+    noRandomize?: boolean;
+    nonceSigner?: Function;
+    pass?: string;
     pedantic?: boolean;
-    tls?: any;
-    queue?: string;
-    serializer?: Serializer;
-    deserializer?: Deserializer;
-    userJWT?: string;
-    nonceSigner?: any;
-    userCreds?: any;
-    useOldRequestStyle?: boolean;
     pingInterval?: number;
     preserveBuffers?: boolean;
-    waitOnFirstConnect?: boolean;
-    verbose?: boolean;
-    noEcho?: boolean;
-    noRandomize?: boolean;
+    reconnect?: boolean;
+    reconnectJitter?: number;
+    reconnectJitterTLS?: number;
+    reconnectDelayHandler?: ()=>number;
+    reconnectTimeWait?: number;
+    servers?: Array<string>;
     timeout?: number;
+    tls?: boolean | tls.TlsOptions;
     token?: string;
+    tokenHandler?: ()=>string;
+    url?: string;
+    useOldRequestStyle?: boolean;
+    user?: string;
+    userCreds?: string;
+    userJWT?: ()=>string | string;
+    verbose?: boolean;
+    waitOnFirstConnect?: boolean;
     yieldTime?: number;
-    tokenHandler?: any;
     [key: string]: any;
   };
 }
