@@ -95,7 +95,7 @@ We cannot accept code without this.
 
 1. Create your patch, **including appropriate test cases**.
 1. Follow our [Coding Rules](#rules).
-1. Run the full Nest test suite (see [common scripts](#common-scripts)),
+1. Run the full Nest test suite (see [Development Setup](#development-setup)),
    and ensure that all tests pass.
 1. Commit your changes using a descriptive commit message that follows our
    [commit message conventions](#commit). Adherence to these conventions

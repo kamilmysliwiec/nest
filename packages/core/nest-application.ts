@@ -57,7 +57,7 @@ export class NestApplication
   private readonly routesResolver: Resolver;
   private readonly microservices: any[] = [];
   private httpServer: any;
-  private isListening = false;
+  private listenUrl: Promise<string>;
 
   constructor(
     container: NestContainer,
@@ -247,7 +247,7 @@ export class NestApplication
   ): Promise<any>;
   public async listen(port: number | string, ...args: any[]): Promise<any> {
     !this.isInitialized && (await this.init());
-    this.isListening = true;
+    this.listenForServerUrl();
     this.httpAdapter.listen(port, ...args);
     return this.httpServer;
   }
@@ -258,34 +258,12 @@ export class NestApplication
     });
   }
 
-  public async getUrl(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      if (!this.isListening) {
-        this.logger.error(MESSAGES.CALL_LISTEN_FIRST);
-        reject(MESSAGES.CALL_LISTEN_FIRST);
-      }
-      this.httpServer.on('listening', () => {
-        const address = this.httpServer.address();
-        if (typeof address === 'string') {
-          if (platform() === 'win32') {
-            return address;
-          }
-          const basePath = encodeURIComponent(address);
-          return `${this.getProtocol()}+unix://${basePath}`;
-        }
-        let host = this.host();
-        if (address && address.family === 'IPv6') {
-          if (host === '::') {
-            host = '[::1]';
-          } else {
-            host = `[${host}]`;
-          }
-        } else if (host === '0.0.0.0') {
-          host = '127.0.0.1';
-        }
-        resolve(`${this.getProtocol()}://${host}:${address.port}`);
-      });
-    });
+  public getUrl(): Promise<string> {
+    if (!this.listenUrl) {
+      this.logger.error(MESSAGES.CALL_LISTEN_FIRST);
+      return Promise.reject(MESSAGES.CALL_LISTEN_FIRST);
+    }
+    return this.listenUrl;
   }
 
   public setGlobalPrefix(prefix: string): this {
@@ -358,6 +336,32 @@ export class NestApplication
   private listenToPromise(microservice: INestMicroservice) {
     return new Promise<void>(async resolve => {
       await microservice.listen(resolve);
+    });
+  }
+
+  private listenForServerUrl() {
+    this.listenUrl = new Promise((resolve) => {
+      this.httpServer.on('listening', () => {
+        const address = this.httpServer.address();
+        if (typeof address === 'string') {
+          if (platform() === 'win32') {
+            return address;
+          }
+          const basePath = encodeURIComponent(address);
+          return `${this.getProtocol()}+unix://${basePath}`;
+        }
+        let host = this.host();
+        if (address && address.family === 'IPv6') {
+          if (host === '::') {
+            host = '[::1]';
+          } else {
+            host = `[${host}]`;
+          }
+        } else if (host === '0.0.0.0') {
+          host = '127.0.0.1';
+        }
+        resolve(`${this.getProtocol()}://${host}:${address.port}`);
+      });
     });
   }
 }
