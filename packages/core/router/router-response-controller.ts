@@ -2,7 +2,7 @@ import { HttpServer, HttpStatus, RequestMethod } from '@nestjs/common';
 import { isFunction, isObject } from '@nestjs/common/utils/shared.utils';
 import { IncomingMessage } from 'http';
 import { Observable } from 'rxjs';
-import { debounce } from 'rxjs/operators';
+import { debounce, take } from 'rxjs/operators';
 import { HeaderStream, SseStream } from './sse-stream';
 
 export interface CustomHeader {
@@ -52,10 +52,14 @@ export class RouterResponseController {
   }
 
   public async transformToResult(resultOrDeferred: any) {
-    if (resultOrDeferred && isFunction(resultOrDeferred.subscribe)) {
-      return resultOrDeferred.toPromise();
-    }
-    return resultOrDeferred;
+    return new Promise<any>((resolve) => {
+      if (resultOrDeferred && isFunction(resultOrDeferred.subscribe)) {
+        return resultOrDeferred.pipe(take(1)).subscribe((result) => {
+          resolve(result)
+        });
+      }
+      resolve(resultOrDeferred);
+    })
   }
 
   public getStatusByMethod(requestMethod: RequestMethod): number {
