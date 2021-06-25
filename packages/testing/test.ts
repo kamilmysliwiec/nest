@@ -1,6 +1,10 @@
-import { ModuleMetadata } from '@nestjs/common/interfaces/modules/module-metadata.interface';
-import { MetadataScanner } from '@nestjs/core/metadata-scanner';
+import { ModuleMetadata, Type } from '../common/interfaces';
+import { MetadataScanner } from '../core';
+import { HttpTestingHandler } from './handlers/http-testing-handler';
+import { RpcTestingHandler } from './handlers/rpc-testing-handler';
+import { WsTestingHandler } from './handlers/ws-testing-handler';
 import { TestingModuleBuilder } from './testing-module.builder';
+import { MethodProperty } from './types/method-property';
 
 export class Test {
   private static readonly metadataScanner = new MetadataScanner();
