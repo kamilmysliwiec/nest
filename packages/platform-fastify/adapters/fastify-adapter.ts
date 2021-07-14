@@ -36,7 +36,6 @@ import {
   InjectOptions,
   Response as LightMyRequestResponse,
 } from 'light-my-request';
-import * as pathToRegexp from 'path-to-regexp';
 import {
   FastifyStaticOptions,
   PointOfViewOptions,
@@ -65,15 +64,30 @@ type FastifyHttpsOptions<
   https: https.ServerOptions;
 };
 
+/**
+ * The following type assertion is valid as we enforce "middie" plugin registration
+ * which enhances the FastifyRequest.RawRequest with the "originalUrl" property.
+ * ref https://github.com/fastify/middie/pull/16
+ * ref https://github.com/fastify/fastify/pull/559
+ */
+type FastifyRawRequest<TServer extends RawServerBase> =
+  RawRequestDefaultExpression<TServer> & { originalUrl?: string };
+
 export class FastifyAdapter<
   TServer extends RawServerBase = RawServerDefault,
-  TRawRequest extends RawRequestDefaultExpression<TServer> = RawRequestDefaultExpression<TServer>,
+  TRawRequest extends FastifyRawRequest<TServer> = FastifyRawRequest<TServer>,
   TRawResponse extends RawReplyDefaultExpression<TServer> = RawReplyDefaultExpression<TServer>,
-> extends AbstractHttpAdapter<
-  TServer,
-  FastifyRequest<RequestGenericInterface, TServer, TRawRequest>,
-  FastifyReply<TServer, TRawRequest, TRawResponse>
-> {
+  TRequest extends FastifyRequest<
+    RequestGenericInterface,
+    TServer,
+    TRawRequest
+  > = FastifyRequest<RequestGenericInterface, TServer, TRawRequest>,
+  TReply extends FastifyReply<
+    TServer,
+    TRawRequest,
+    TRawResponse
+  > = FastifyReply<TServer, TRawRequest, TRawResponse>,
+> extends AbstractHttpAdapter<TServer, TRequest, TReply> {
   protected readonly instance: FastifyInstance<
     TServer,
     TRawRequest,
@@ -121,11 +135,11 @@ export class FastifyAdapter<
   }
 
   public reply(
-    response: TRawResponse | FastifyReply,
+    response: TRawResponse | TReply,
     body: any,
     statusCode?: number,
   ) {
-    const fastifyReply: FastifyReply = this.isNativeResponse(response)
+    const fastifyReply: TReply = this.isNativeResponse(response)
       ? new Reply(
           response,
           {
@@ -150,23 +164,23 @@ export class FastifyAdapter<
     return fastifyReply.send(body);
   }
 
-  public status(response: TRawResponse | FastifyReply, statusCode: number) {
+  public status(response: TRawResponse | TReply, statusCode: number) {
     if (this.isNativeResponse(response)) {
       response.statusCode = statusCode;
       return response;
     }
-    return (response as FastifyReply).code(statusCode);
+    return (response as TReply).code(statusCode);
   }
 
   public render(
-    response: FastifyReply & { view: Function },
+    response: TReply & { view: Function },
     view: string,
     options: any,
   ) {
     return response && response.view(view, options);
   }
 
-  public redirect(response: FastifyReply, statusCode: number, url: string) {
+  public redirect(response: TReply, statusCode: number, url: string) {
     const code = statusCode ?? HttpStatus.FOUND;
     return response.status(code).redirect(url);
   }
@@ -248,29 +262,25 @@ export class FastifyAdapter<
     );
   }
 
-  public setHeader(response: FastifyReply, name: string, value: string) {
+  public setHeader(response: TReply, name: string, value: string) {
     return response.header(name, value);
   }
 
-  public getRequestHostname(request: FastifyRequest): string {
+  public getRequestHostname(request: TRequest): string {
     return request.hostname;
   }
 
-  public getRequestMethod(request: FastifyRequest): string {
+  public getRequestMethod(request: TRequest): string {
     return request.raw ? request.raw.method : request.method;
   }
 
-  public getRequestUrl(request: FastifyRequest): string {
-    return request.raw ? request.raw.url : request.url;
+  public getRequestUrl(request: TRequest): string;
+  public getRequestUrl(request: TRawRequest): string;
+  public getRequestUrl(request: TRequest & TRawRequest): string {
+    return this.getRequestOriginalUrl(request.raw || request);
   }
 
-  public enableCors(
-    options:
-      | CorsOptions
-      | CorsOptionsDelegate<
-          FastifyRequest<RequestGenericInterface, TServer, TRawRequest>
-        >,
-  ) {
+  public enableCors(options: CorsOptions | CorsOptionsDelegate<TRequest>) {
     if (typeof options === 'function') {
       this.register(require('fastify-cors'), () => options);
     } else {
@@ -293,28 +303,15 @@ export class FastifyAdapter<
       await this.registerMiddie();
     }
     return (path: string, callback: Function) => {
-      const re = pathToRegexp(path);
-      const normalizedPath = path === '/*' ? '' : path;
+      const normalizedPath = path.endsWith('/*')
+        ? `${path.slice(0, -1)}(.*)`
+        : path;
 
-      // The following type assertion is valid as we enforce "middie" plugin registration
-      // which enhances the FastifyInstance with the "use()" method.
+      // The following type assertion is valid as we use import('middie') rather than require('middie')
       // ref https://github.com/fastify/middie/pull/55
-      const instanceWithUseFn = this.instance as unknown as FastifyInstance & {
-        use: Function;
-      };
-
-      instanceWithUseFn.use(
+      this.instance.use(
         normalizedPath,
         (req: any, res: any, next: Function) => {
-          const queryParamsIndex = req.originalUrl.indexOf('?');
-          const pathname =
-            queryParamsIndex >= 0
-              ? req.originalUrl.slice(0, queryParamsIndex)
-              : req.originalUrl;
-
-          if (!re.exec(pathname + '/') && normalizedPath) {
-            return next();
-          }
           if (
             requestMethod === RequestMethod.ALL ||
             req.method === RequestMethod[requestMethod] ||
@@ -344,13 +341,17 @@ export class FastifyAdapter<
   }
 
   private isNativeResponse(
-    response: TRawResponse | FastifyReply,
+    response: TRawResponse | TReply,
   ): response is TRawResponse {
     return !('status' in response);
   }
 
   private async registerMiddie() {
     this.isMiddieRegistered = true;
-    await this.register(require('middie'));
+    await this.register(import('middie'));
+  }
+
+  private getRequestOriginalUrl(rawRequest: TRawRequest) {
+    return rawRequest.originalUrl || rawRequest.url;
   }
 }
