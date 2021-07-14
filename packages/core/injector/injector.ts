@@ -229,8 +229,9 @@ export class Injector {
     inquirer?: InstanceWrapper,
     parentInquirer?: InstanceWrapper,
   ) {
-    const inquirerId = this.getInquirerId(inquirer);
+    let inquirerId = this.getInquirerId(inquirer);
     const metadata = wrapper.getCtorMetadata();
+
     if (metadata && contextId !== STATIC_CONTEXT) {
       const deps = await this.loadCtorMetadata(
         metadata,
@@ -252,6 +253,10 @@ export class Injector {
       try {
         if (this.isInquirer(param, parentInquirer)) {
           return parentInquirer && parentInquirer.instance;
+        }
+        if (inquirer?.isTransient && parentInquirer) {
+          inquirer = parentInquirer;
+          inquirerId = this.getInquirerId(parentInquirer);
         }
         const paramWrapper = await this.resolveSingleParam<T>(
           wrapper,
@@ -644,7 +649,7 @@ export class Injector {
           )
         : new (metatype as Type<any>)(...instances);
     } else if (isInContext) {
-      const factoryReturnValue = ((targetMetatype.metatype as any) as Function)(
+      const factoryReturnValue = (targetMetatype.metatype as any as Function)(
         ...instances,
       );
       instanceHost.instance = await factoryReturnValue;
