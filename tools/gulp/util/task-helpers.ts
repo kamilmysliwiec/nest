@@ -12,3 +12,12 @@ export function getFolders(dir: string) {
 export function getDirs(base: string) {
   return getFolders(base).map(path => `${base}/${path}`);
 }
+
+/**
+ * Checks if the directory contains a package.json file
+ * @param dir Path to the dircetory
+ * @returns True if the directory contains a package.json
+ */
+export function containsPackageJson(dir: string) {
+  return readdirSync(dir).some(file => file === 'package.json');
+}
