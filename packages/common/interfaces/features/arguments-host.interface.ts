@@ -1,4 +1,4 @@
-export type ContextType = 'http' | 'ws' | 'rpc';
+export type ContextType = 'http' | 'ws' | 'rpc' | 'graphql';
 
 /**
  * Methods to obtain request and response objects.
