@@ -23,7 +23,7 @@ services:
       - "9001:9001"
     restart: always
   mysql:
-    image: mysql:5.7.34
+    image: mysql:8.0.25
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: test

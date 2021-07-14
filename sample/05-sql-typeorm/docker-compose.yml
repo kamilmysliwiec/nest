@@ -2,7 +2,7 @@ version: "3"
 
 services:
   mysql:
-    image: mysql:5
+    image: mysql:8
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
