@@ -32,7 +32,7 @@
     "@nestjs/cli": "8.0.2",
     "@nestjs/schematics": "8.0.1",
     "@nestjs/testing": "8.0.2",
-    "@types/express": "4.17.12",
+    "@types/express": "4.17.13",
     "@types/jest": "26.0.24",
     "@types/node": "14.17.5",
     "@types/supertest": "2.0.11",
