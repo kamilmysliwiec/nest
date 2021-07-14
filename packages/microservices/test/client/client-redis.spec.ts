@@ -3,6 +3,7 @@ import { Subject } from 'rxjs';
 import * as sinon from 'sinon';
 import { ClientRedis } from '../../client/client-redis';
 import { ERROR_EVENT } from '../../constants';
+import { Client } from '../../external/nats-client.interface';
 
 describe('ClientRedis', () => {
   const test = 'test';
@@ -116,19 +117,22 @@ describe('ClientRedis', () => {
     });
   });
   describe('createResponseCallback', () => {
-    let callback: sinon.SinonSpy, subscription;
+    let callback: sinon.SinonSpy, subscription; // : ReturnType<typeof client['createResponseCallback']>;
     const responseMessage = {
       response: 'test',
       id: '1',
     };
 
     describe('not completed', () => {
-      beforeEach(() => {
+      beforeEach(async () => {
         callback = sinon.spy();
 
         subscription = client.createResponseCallback();
         client['routingMap'].set(responseMessage.id, callback);
-        subscription('channel', Buffer.from(JSON.stringify(responseMessage)));
+        await subscription(
+          'channel',
+          Buffer.from(JSON.stringify(responseMessage)),
+        );
       });
       it('should call callback with expected arguments', () => {
         expect(

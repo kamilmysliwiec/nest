@@ -155,7 +155,7 @@ export class ClientKafka extends ClientProxy {
   }
 
   public createResponseCallback(): (payload: EachMessagePayload) => any {
-    return (payload: EachMessagePayload) => {
+    return async (payload: EachMessagePayload) => {
       const rawMessage = this.parser.parse<KafkaMessage>(
         Object.assign(payload.message, {
           topic: payload.topic,
@@ -165,9 +165,8 @@ export class ClientKafka extends ClientProxy {
       if (isUndefined(rawMessage.headers[KafkaHeaders.CORRELATION_ID])) {
         return;
       }
-      const { err, response, isDisposed, id } = this.deserializer.deserialize(
-        rawMessage,
-      );
+      const { err, response, isDisposed, id } =
+        await this.deserializer.deserialize(rawMessage);
       const callback = this.routingMap.get(id);
       if (!callback) {
         return;

@@ -218,10 +218,10 @@ describe('ClientRMQ', function () {
 
       beforeEach(async () => {
         unsubscribeSpy = sinon.spy();
-        client['responseEmitter'] = ({
+        client['responseEmitter'] = {
           removeListener: unsubscribeSpy,
           on: sinon.spy(),
-        } as any) as EventEmitter;
+        } as any as EventEmitter;
 
         subscription = await client['publish'](msg, sinon.spy());
         subscription();
@@ -239,13 +239,13 @@ describe('ClientRMQ', function () {
       beforeEach(() => {
         callback = sinon.spy();
       });
-      it('should call callback with correct object', () => {
+      it('should call callback with correct object', async () => {
         const packet = {
           err: true,
           response: 'test',
           isDisposed: false,
         };
-        client.handleMessage(packet, callback);
+        await client.handleMessage(packet, callback);
         expect(
           callback.calledWith({
             err: packet.err,
@@ -261,12 +261,12 @@ describe('ClientRMQ', function () {
       beforeEach(() => {
         callback = sinon.spy();
       });
-      it('should call callback with correct object', () => {
+      it('should call callback with correct object', async () => {
         const packet = {
           response: 'test',
           isDisposed: true,
         };
-        client.handleMessage(packet, callback);
+        await client.handleMessage(packet, callback);
         expect(
           callback.calledWith({
             err: undefined,
@@ -283,12 +283,12 @@ describe('ClientRMQ', function () {
       beforeEach(() => {
         callback = sinon.spy();
       });
-      it('should call callback with correct object', () => {
+      it('should call callback with correct object', async () => {
         const packet = {
           response: 'test',
           isDisposed: false,
         };
-        client.handleMessage(packet, callback);
+        await client.handleMessage(packet, callback);
         expect(
           callback.calledWith({
             err: undefined,

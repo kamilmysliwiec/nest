@@ -88,7 +88,7 @@ export class ServerNats extends Server implements CustomTransportStrategy {
     const replyTo = natsMsg.reply;
 
     const natsCtx = new NatsContext([callerSubject, natsMsg.headers]);
-    const message = this.deserializer.deserialize(rawMessage, {
+    const message = await this.deserializer.deserialize(rawMessage, {
       channel,
       replyTo,
     });

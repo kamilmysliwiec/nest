@@ -107,16 +107,16 @@ describe('ServerRedis', () => {
       getPublisherSpy = sinon.spy();
       sinon.stub(server, 'getPublisher').callsFake(() => getPublisherSpy);
     });
-    it('should call "handleEvent" if identifier is not present', () => {
+    it('should call "handleEvent" if identifier is not present', async () => {
       const handleEventSpy = sinon.spy(server, 'handleEvent');
       sinon.stub(server, 'parseMessage').callsFake(() => ({ data } as any));
 
-      server.handleMessage(channel, JSON.stringify({}), null);
+      await server.handleMessage(channel, JSON.stringify({}), null);
       expect(handleEventSpy.called).to.be.true;
     });
-    it(`should publish NO_MESSAGE_HANDLER if pattern not exists in messageHandlers object`, () => {
+    it(`should publish NO_MESSAGE_HANDLER if pattern not exists in messageHandlers object`, async () => {
       sinon.stub(server, 'parseMessage').callsFake(() => ({ id, data } as any));
-      server.handleMessage(channel, JSON.stringify({ id }), null);
+      await server.handleMessage(channel, JSON.stringify({ id }), null);
       expect(
         getPublisherSpy.calledWith({
           id,
@@ -125,14 +125,14 @@ describe('ServerRedis', () => {
         }),
       ).to.be.true;
     });
-    it(`should call handler with expected arguments`, () => {
+    it(`should call handler with expected arguments`, async () => {
       const handler = sinon.spy();
       (server as any).messageHandlers = objectToMap({
         [channel]: handler,
       });
       sinon.stub(server, 'parseMessage').callsFake(() => ({ id, data } as any));
 
-      server.handleMessage(channel, {}, null);
+      await server.handleMessage(channel, {}, null);
       expect(handler.calledWith(data)).to.be.true;
     });
   });

@@ -130,7 +130,7 @@ export class ServerRMQ extends Server implements CustomTransportStrategy {
     }
     const { content, properties } = message;
     const rawMessage = JSON.parse(content.toString());
-    const packet = this.deserializer.deserialize(rawMessage);
+    const packet = await this.deserializer.deserialize(rawMessage);
     const pattern = isString(packet.pattern)
       ? packet.pattern
       : JSON.stringify(packet.pattern);
@@ -170,7 +170,7 @@ export class ServerRMQ extends Server implements CustomTransportStrategy {
     correlationId: string,
   ): void {
     const outgoingResponse = this.serializer.serialize(
-      (message as unknown) as OutgoingResponse,
+      message as unknown as OutgoingResponse,
     );
     const buffer = Buffer.from(JSON.stringify(outgoingResponse));
     this.channel.sendToQueue(replyTo, buffer, { correlationId });

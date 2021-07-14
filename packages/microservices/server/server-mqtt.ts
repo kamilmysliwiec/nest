@@ -97,7 +97,7 @@ export class ServerMqtt extends Server implements CustomTransportStrategy {
     originalPacket?: Record<string, any>,
   ): Promise<any> {
     const rawPacket = this.parseMessage(buffer.toString());
-    const packet = this.deserializer.deserialize(rawPacket, { channel });
+    const packet = await this.deserializer.deserialize(rawPacket, { channel });
     const mqttContext = new MqttContext([channel, originalPacket]);
     if (isUndefined((packet as IncomingRequest).id)) {
       return this.handleEvent(channel, packet, mqttContext);

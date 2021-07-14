@@ -97,7 +97,7 @@ export class ServerRedis extends Server implements CustomTransportStrategy {
     pub: RedisClient,
   ) {
     const rawMessage = this.parseMessage(buffer);
-    const packet = this.deserializer.deserialize(rawMessage, { channel });
+    const packet = await this.deserializer.deserialize(rawMessage, { channel });
     const redisCtx = new RedisContext([channel]);
 
     if (isUndefined((packet as IncomingRequest).id)) {

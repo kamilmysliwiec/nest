@@ -100,9 +100,9 @@ describe('ServerRMQ', () => {
     beforeEach(() => {
       sendMessageStub = sinon.stub(server, 'sendMessage').callsFake(() => ({}));
     });
-    it('should call "handleEvent" if identifier is not present', () => {
+    it('should call "handleEvent" if identifier is not present', async () => {
       const handleEventSpy = sinon.spy(server, 'handleEvent');
-      server.handleMessage(createMessage({ pattern: '', data: '' }), '');
+      await server.handleMessage(createMessage({ pattern: '', data: '' }), '');
       expect(handleEventSpy.called).to.be.true;
     });
     it('should send NO_MESSAGE_HANDLER error if key does not exists in handlers object', async () => {

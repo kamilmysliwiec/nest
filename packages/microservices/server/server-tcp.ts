@@ -69,7 +69,7 @@ export class ServerTCP extends Server implements CustomTransportStrategy {
   }
 
   public async handleMessage(socket: JsonSocket, rawMessage: unknown) {
-    const packet = this.deserializer.deserialize(rawMessage);
+    const packet = await this.deserializer.deserialize(rawMessage);
     const pattern = !isString(packet.pattern)
       ? JSON.stringify(packet.pattern)
       : packet.pattern;

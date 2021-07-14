@@ -60,9 +60,9 @@ export class ClientTCP extends ClientProxy {
     return this.connection;
   }
 
-  public handleResponse(buffer: unknown): void {
+  public async handleResponse(buffer: unknown): Promise<void> {
     const { err, response, isDisposed, id } =
-      this.deserializer.deserialize(buffer);
+      await this.deserializer.deserialize(buffer);
     const callback = this.routingMap.get(id);
     if (!callback) {
       return undefined;

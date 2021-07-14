@@ -94,10 +94,10 @@ export class ClientMqtt extends ClientProxy {
   }
 
   public createResponseCallback(): (channel: string, buffer: Buffer) => any {
-    return (channel: string, buffer: Buffer) => {
+    return async (channel: string, buffer: Buffer) => {
       const packet = JSON.parse(buffer.toString());
       const { err, response, isDisposed, id } =
-        this.deserializer.deserialize(packet);
+        await this.deserializer.deserialize(packet);
 
       const callback = this.routingMap.get(id);
       if (!callback) {

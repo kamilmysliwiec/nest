@@ -63,8 +63,8 @@ describe('ServerTCP', () => {
         sendMessage: sinon.spy(),
       };
     });
-    it('should send NO_MESSAGE_HANDLER error if key does not exists in handlers object', () => {
-      server.handleMessage(socket, msg);
+    it('should send NO_MESSAGE_HANDLER error if key does not exists in handlers object', async () => {
+      await server.handleMessage(socket, msg);
       expect(
         socket.sendMessage.calledWith({
           id: msg.id,
@@ -73,12 +73,12 @@ describe('ServerTCP', () => {
         }),
       ).to.be.true;
     });
-    it('should call handler if exists in handlers object', () => {
+    it('should call handler if exists in handlers object', async () => {
       const handler = sinon.spy();
       (server as any).messageHandlers = objectToMap({
         [msg.pattern]: handler as any,
       });
-      server.handleMessage(socket, msg);
+      await server.handleMessage(socket, msg);
       expect(handler.calledOnce).to.be.true;
     });
   });

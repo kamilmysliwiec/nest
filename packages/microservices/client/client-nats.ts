@@ -63,14 +63,14 @@ export class ClientNats extends ClientProxy {
     packet: ReadPacket & PacketId,
     callback: (packet: WritePacket) => any,
   ) {
-    return (error: unknown | undefined, natsMsg: NatsMsg) => {
+    return async (error: unknown | undefined, natsMsg: NatsMsg) => {
       if (error) {
         return callback({
           err: error,
         });
       }
       const rawPacket = natsMsg.data;
-      const message = this.deserializer.deserialize(rawPacket);
+      const message = await this.deserializer.deserialize(rawPacket);
       if (message.id && message.id !== packet.id) {
         return undefined;
       }
