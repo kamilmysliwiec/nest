@@ -90,7 +90,7 @@
     "@types/http-errors": "1.8.1",
     "@types/mocha": "8.2.3",
     "@types/mongoose": "5.11.97",
-    "@types/node": "15.14.0",
+    "@types/node": "16.3.2",
     "@types/redis": "2.8.31",
     "@types/reflect-metadata": "0.1.0",
     "@types/sinon": "10.0.2",
