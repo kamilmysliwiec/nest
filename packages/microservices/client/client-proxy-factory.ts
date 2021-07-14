@@ -3,6 +3,7 @@ import {
   ClientOptions,
   CustomClientOptions,
   TcpClientOptions,
+  TcpTlsClientOptions,
 } from '../interfaces/client-metadata.interface';
 import { Closeable } from '../interfaces/closeable.interface';
 import {
@@ -56,13 +57,23 @@ export class ClientProxyFactory {
       case Transport.KAFKA:
         return new ClientKafka(options as KafkaOptions['options']);
       default:
-        return new ClientTCP(options as TcpClientOptions['options']);
+        const uncheckedOptions = options as
+          | TcpClientOptions['options']
+          | TcpTlsClientOptions['options']
+          | undefined;
+        if (uncheckedOptions && uncheckedOptions.useTls === true) {
+          return new ClientTCP(options as TcpTlsClientOptions['options']);
+        } else {
+          return new ClientTCP(
+            options as TcpClientOptions['options'] | undefined,
+          );
+        }
     }
   }
 
   private static isCustomClientOptions(
-    options: ClientOptions | CustomClientOptions,
+    options: ClientOptions | CustomClientOptions | undefined | null,
   ): options is CustomClientOptions {
-    return !!(options as CustomClientOptions).customClass;
+    return options && !!(options as CustomClientOptions).customClass;
   }
 }

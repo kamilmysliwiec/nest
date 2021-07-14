@@ -1,5 +1,6 @@
 import { isString, isUndefined } from '@nestjs/common/utils/shared.utils';
 import * as net from 'net';
+import * as tls from 'tls';
 import { Server as NetSocket, Socket } from 'net';
 import { Observable } from 'rxjs';
 import {
@@ -11,6 +12,7 @@ import {
   NO_MESSAGE_HANDLER,
   TCP_DEFAULT_HOST,
   TCP_DEFAULT_PORT,
+  TCP_DEFAULT_USE_TLS,
 } from '../constants';
 import { TcpContext } from '../ctx-host/tcp.context';
 import { Transport } from '../enums';
@@ -22,7 +24,10 @@ import {
   ReadPacket,
   WritePacket,
 } from '../interfaces';
-import { TcpOptions } from '../interfaces/microservice-configuration.interface';
+import {
+  TcpOptions,
+  TcpTlsOptions,
+} from '../interfaces/microservice-configuration.interface';
 import { Server } from './server';
 
 export class ServerTCP extends Server implements CustomTransportStrategy {
@@ -30,14 +35,20 @@ export class ServerTCP extends Server implements CustomTransportStrategy {
 
   private readonly port: number;
   private readonly host: string;
+  private readonly useTls: boolean;
   private server: NetSocket;
   private isExplicitlyTerminated = false;
   private retryAttemptsCount = 0;
 
-  constructor(private readonly options: TcpOptions['options']) {
+  constructor(options: TcpOptions['options']);
+  constructor(options: TcpTlsOptions['options']);
+  constructor(
+    private readonly options: TcpOptions['options'] | TcpTlsOptions['options'],
+  ) {
     super();
     this.port = this.getOptionsProp(options, 'port') || TCP_DEFAULT_PORT;
     this.host = this.getOptionsProp(options, 'host') || TCP_DEFAULT_HOST;
+    this.useTls = this.getOptionsProp(options, 'useTls') || TCP_DEFAULT_USE_TLS;
 
     this.init();
     this.initializeSerializer(options);
@@ -119,7 +130,14 @@ export class ServerTCP extends Server implements CustomTransportStrategy {
   }
 
   private init() {
-    this.server = net.createServer(this.bindHandler.bind(this));
+    if (this.useTls) {
+      // TLS enabled, use tls server
+      const options = this.options as TcpTlsOptions['options'];
+      this.server = tls.createServer(options, this.bindHandler.bind(this));
+    } else {
+      // TLS disabled, use net server
+      this.server = net.createServer(this.bindHandler.bind(this));
+    }
     this.server.on(ERROR_EVENT, this.handleError.bind(this));
     this.server.on(CLOSE_EVENT, this.handleClose.bind(this));
   }

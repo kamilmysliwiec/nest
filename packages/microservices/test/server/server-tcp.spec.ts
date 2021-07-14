@@ -1,5 +1,7 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
+import { Server as TLSServer } from 'tls';
+import { Server as NetServer } from 'net';
 import { NO_MESSAGE_HANDLER } from '../../constants';
 import { BaseRpcContext } from '../../ctx-host/base-rpc.context';
 import { ServerTCP } from '../../server/server-tcp';
@@ -134,6 +136,24 @@ describe('ServerTCP', () => {
         new BaseRpcContext([]),
       );
       expect(handler.calledWith(data)).to.be.true;
+    });
+  });
+
+  describe('tls', () => {
+    it('should enable TLS when set', () => {
+      const server = new ServerTCP({
+        useTls: true,
+      });
+      /**
+       * Expect the server to be a instance of tls.Server
+       */
+      expect(server['server']).instanceOf(TLSServer);
+    });
+    it('should not use TLS when not requested', () => {
+      const server = new ServerTCP({
+        useTls: false,
+      });
+      expect(server['server']).instanceOf(NetServer);
     });
   });
 });

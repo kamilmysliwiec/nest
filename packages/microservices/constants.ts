@@ -2,6 +2,7 @@ import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 
 export const TCP_DEFAULT_PORT = 3000;
 export const TCP_DEFAULT_HOST = 'localhost';
+export const TCP_DEFAULT_USE_TLS = false;
 export const REDIS_DEFAULT_URL = 'redis://localhost:6379';
 export const NATS_DEFAULT_URL = 'nats://localhost:4222';
 export const MQTT_DEFAULT_URL = 'mqtt://localhost:1883';
@@ -17,6 +18,7 @@ export const ERROR_EVENT = 'error';
 export const CLOSE_EVENT = 'close';
 export const SUBSCRIBE = 'subscribe';
 export const CANCEL_EVENT = 'cancelled';
+export const TLS_CONNECT_EVENT = 'secureConnect';
 
 export const PATTERN_METADATA = 'microservices:pattern';
 export const TRANSPORT_METADATA = 'microservices:transport';

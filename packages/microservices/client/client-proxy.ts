@@ -25,6 +25,7 @@ import {
   RedisOptions,
   RmqOptions,
   TcpClientOptions,
+  TcpTlsClientOptions,
   WritePacket,
 } from '../interfaces';
 import { ProducerDeserializer } from '../interfaces/deserializer.interface';
@@ -128,7 +129,7 @@ export abstract class ClientProxy {
 
   protected getOptionsProp<
     T extends ClientOptions['options'],
-    K extends keyof T
+    K extends keyof T,
   >(obj: T, prop: K, defaultValue: T[K] = undefined) {
     return (obj && obj[prop]) || defaultValue;
   }
@@ -140,26 +141,32 @@ export abstract class ClientProxy {
   protected initializeSerializer(options: ClientOptions['options']) {
     this.serializer =
       (options &&
-        (options as
-          | RedisOptions['options']
-          | NatsOptions['options']
-          | MqttOptions['options']
-          | TcpClientOptions['options']
-          | RmqOptions['options']
-          | KafkaOptions['options']).serializer) ||
+        (
+          options as
+            | RedisOptions['options']
+            | NatsOptions['options']
+            | MqttOptions['options']
+            | TcpClientOptions['options']
+            | TcpTlsClientOptions['options']
+            | RmqOptions['options']
+            | KafkaOptions['options']
+        ).serializer) ||
       new IdentitySerializer();
   }
 
   protected initializeDeserializer(options: ClientOptions['options']) {
     this.deserializer =
       (options &&
-        (options as
-          | RedisOptions['options']
-          | NatsOptions['options']
-          | MqttOptions['options']
-          | TcpClientOptions['options']
-          | RmqOptions['options']
-          | KafkaOptions['options']).deserializer) ||
+        (
+          options as
+            | RedisOptions['options']
+            | NatsOptions['options']
+            | MqttOptions['options']
+            | TcpClientOptions['options']
+            | TcpTlsClientOptions['options']
+            | RmqOptions['options']
+            | KafkaOptions['options']
+        ).deserializer) ||
       new IncomingResponseDeserializer();
   }
 }
